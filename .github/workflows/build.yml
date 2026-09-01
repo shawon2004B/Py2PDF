@@ -12,12 +12,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Unpack Project
+    - name: Unpack and Find Project Files
       run: |
         unzip -o Py2PDF_Ready.zip
-        # Move files up to root if nested inside a subfolder
-        if [ -d "Py2PDF" ]; then cp -r Py2PDF/* . ; fi
-        if [ -d "Py2PDF_Ready" ]; then cp -r Py2PDF_Ready/* . ; fi
+        # Move files to root if nested inside any subfolder
+        find . -mindepth 2 \( -name "build.gradle" -o -name "build.gradle.kts" \) -exec dirname {} \; | while read -r dir; do
+          if [ "$dir" != "." ]; then
+            echo "Found project in $dir, moving contents to root..."
+            cp -r "$dir"/* .
+          fi
+        done
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -43,3 +47,4 @@ jobs:
       with:
         name: Py2PDF-app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+        
