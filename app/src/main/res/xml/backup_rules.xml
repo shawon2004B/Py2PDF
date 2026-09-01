@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!--
+   Sample backup rules file; uncomment lines to enable backup for certain files.
+   Files must be eligible for backup: they cannot go on system RAM file systems or
+   where the application resumes execution, both of which are captured in the
+   android:allowBackup attribute by default.
+    -->
+
+    <!-- Exclude specific shared preferences that contain sensitive data -->
+    <exclude domain="sharedpref" path="DeviceIdUniqueidentifier.xml" />
+</full-backup-content>
