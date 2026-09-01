@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,13 +23,19 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.py2pdf.R
-import com.py2pdf.data.repository.PdfRepository
-import com.py2pdf.domain.usecase.RenderPdfUseCase
 import com.py2pdf.presentation.viewmodel.PdfPreviewViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
 
+/**
+ * Main PDF Preview Screen composable.
+ * Handles rendering PDF pages and sharing functionality.
+ *
+ * State Management:
+ * - Uses ViewModel for UI state management
+ * - Non-blocking IO operations on Dispatchers.IO
+ * - Proper coroutine scoping with viewModelScope
+ */
 @Composable
 fun PdfPreviewScreen(
     viewModel: PdfPreviewViewModel = viewModel()
@@ -39,6 +46,7 @@ fun PdfPreviewScreen(
     
     val uiState by viewModel.uiState.collectAsState()
 
+    // Load PDF pages when screen is composed
     LaunchedEffect(Unit) {
         viewModel.loadPdfPages()
     }
@@ -58,7 +66,7 @@ fun PdfPreviewScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share PDF"
+                            contentDescription = stringResource(R.string.share_pdf)
                         )
                     }
                 }
@@ -97,12 +105,25 @@ fun PdfPreviewScreen(
     }
 }
 
+/**
+ * Displays PDF pages in a vertically scrollable column.
+ * Each page is rendered as a Bitmap and displayed in a Card.
+ *
+ * Memory Management:
+ * - Bitmaps are managed by the ViewModel and properly recycled
+ * - UI composition doesn't create additional bitmap copies
+ */
 @Composable
 fun PdfPagesColumn(
     pages: List<android.graphics.Bitmap>,
     scrollState: androidx.compose.foundation.ScrollState,
     modifier: Modifier = Modifier
 ) {
+    if (pages.isEmpty()) {
+        EmptyPdfPlaceholder()
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -111,31 +132,37 @@ fun PdfPagesColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         pages.forEachIndexed { index, bitmap ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
+            if (!bitmap.isRecycled) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "PDF Page ${index + 1}",
+                    Column(
                         modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = "Page ${index + 1}",
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(8.dp),
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    ) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "PDF Page ${index + 1}",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "Page ${index + 1}",
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .padding(8.dp),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+/**
+ * Displays error message with icon.
+ * Error handling for file access, permission, and rendering errors.
+ */
 @Composable
 fun ErrorMessage(
     message: String,
@@ -149,7 +176,7 @@ fun ErrorMessage(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Share,
+            imageVector = Icons.Default.Warning,
             contentDescription = "Error",
             modifier = Modifier.size(48.dp),
             tint = MaterialTheme.colorScheme.error
@@ -158,11 +185,15 @@ fun ErrorMessage(
         Text(
             text = message,
             color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
     }
 }
 
+/**
+ * Placeholder UI for when no PDF is loaded.
+ */
 @Composable
 fun EmptyPdfPlaceholder(
     modifier: Modifier = Modifier

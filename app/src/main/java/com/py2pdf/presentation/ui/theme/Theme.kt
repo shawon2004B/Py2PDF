@@ -27,27 +27,42 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Pink40
 )
 
+/**
+ * Py2PDF Theme composable.
+ * Supports dynamic color on Android 12+ and respects system dark theme preference.
+ *
+ * @param darkTheme Override dark theme setting (uses system default if not specified)
+ * @param dynamicColor Enable dynamic color on Android 12+
+ * @param content Theme content
+ */
 @Composable
 fun Py2PDFTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme) {
+                dynamicDarkColorScheme(context)
+            } else {
+                dynamicLightColorScheme(context)
+            }
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view)?.isAppearanceLightStatusBars = !darkTheme
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                window.statusBarColor = colorScheme.primary.toArgb()
+                WindowCompat.getInsetsController(window, view)?.isAppearanceLightStatusBars =
+                    !darkTheme
+            }
         }
     }
 
